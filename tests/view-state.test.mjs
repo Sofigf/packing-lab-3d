@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Simulation} from '../engine.js';
+import {getMachineViewState,WORLD} from '../view-state.js';
+test('3D maps actual millimetres and never advances or mutates simulation',()=>{const s=new Simulation();s.start();s.advance(100);const before=JSON.stringify(s);const a=getMachineViewState(s);assert.equal(a.products[0].x,s.machine.products[0].x-WORLD.centerX);assert.equal(a.sensorX,s.params.sensorPosition-WORLD.centerX);assert.equal(a.speed,200);a.products[0].x=999; a.alarms.push('test');assert.equal(JSON.stringify(s),before);});
+test('3D follows unwired motor and actual jaw throughout complete cycles',()=>{const s=new Simulation();s.start();let closed=false;for(let i=0;i<3000;i++){s.scan();const v=getMachineViewState(s);assert.equal(v.jawRatio,s.machine.jaw);assert.equal(v.travel,s.machine.travel);if(s.machine.jaw===1){closed=true;assert.equal(v.jawY,WORLD.jawClosedY);}}assert.ok(closed);assert.ok(getMachineViewState(s).good>5);s.wires=s.wires.filter(w=>w.to!=='motor');s.advance(500);const v=getMachineViewState(s);assert.equal(v.speed,0);assert.equal(v.connections.motor,undefined);});
+test('3D reads live sensor placement and restored project without stale runtime',()=>{const s=new Simulation();s.params.sensorPosition=320;s.start();s.advance(400);const loaded=new Simulation();loaded.load(s.project());const v=getMachineViewState(loaded);assert.equal(v.sensorX,-230);assert.equal(v.time,0);assert.equal(v.speed,0);assert.equal(v.connections.sensor,'I0.3');});
